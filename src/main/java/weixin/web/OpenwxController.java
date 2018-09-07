@@ -43,7 +43,7 @@ import java.util.*;
 public class OpenwxController {
 
 	private final String APPID = "wx570bc396a51b8ff8";
-
+    private final String USERNAME = "gh_3c884a361561";
     private static CommonLogger logger = CommonLogFactory.getLogger(OpenwxController.class);
 
 	/**
@@ -126,12 +126,13 @@ public class OpenwxController {
         in.close();
  
         String xml = sb.toString();
+        logger.info("第三方平台全网发布-------------{appid}/callback-----------验证开始。。。。xml="+xml);
         Document doc = DocumentHelper.parseText(xml);
         Element rootElt = doc.getRootElement();
         String toUserName = rootElt.elementText("ToUserName");
  
         //微信全网测试账号
-        if (StringUtils.equalsIgnoreCase(toUserName, APPID)) {
+        if (StringUtils.equalsIgnoreCase(toUserName, USERNAME)) {
            logger.info("全网发布接入检测消息反馈开始---------------APPID="+ APPID +"------------------------toUserName="+toUserName);
            checkWeixinAllNetworkCheck(request,response,xml);
         }
