@@ -10,6 +10,7 @@ import org.dom4j.Element;
 //import org.jeecgframework.core.util.oConvertUtils;
 //import org.jeecgframework.web.system.service.SystemService;
 import org.jeewx.api.core.exception.WexinReqException;
+import org.jeewx.api.core.util.DateUtils;
 import org.jeewx.api.mp.aes.AesException;
 import org.jeewx.api.mp.aes.WXBizMsgCrypt;
 import org.jeewx.api.third.JwThirdAPI;
@@ -17,6 +18,8 @@ import org.jeewx.api.third.model.ApiComponentToken;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
+import weixin.log.CommonLogFactory;
+import weixin.log.CommonLogger;
 import weixin.open.entity.base.WeixinOpenAccountEntity;
 
 import javax.servlet.http.HttpServletRequest;
@@ -39,22 +42,20 @@ import java.util.*;
 @RequestMapping("/openwx")
 public class OpenwxController {
 
-	
-	
-	private final String APPID = "???";
-	
-	
+	private final String APPID = "wx570bc396a51b8ff8";
+
+    private static CommonLogger logger = CommonLogFactory.getLogger(OpenwxController.class);
+
 	/**
 	 * 微信全网测试账号
 	 **/
-	private final static String COMPONENT_APPID = "???";
-	private final String COMPONENT_APPSECRET = "???";
-	private final static String COMPONENT_ENCODINGAESKEY = "?????";
-	private final static String COMPONENT_TOKEN = "?????";
+	private final static String COMPONENT_APPID = "wx5fc3967fdf9de618";
+	private final static String COMPONENT_APPSECRET = "b8ecd40b98e28929a6d001ae89bafeb3";
+	private final static String COMPONENT_ENCODINGAESKEY = "ryj8otghsh46jl895e6ujk68o4w5ygjtuk8w6htk5t6";
+	private final static String COMPONENT_TOKEN = "34g31qgv3425g35";
 	
 //	@Autowired
 //	private SystemService systemService;
-	
 	
 	 /**
      * 授权事件接收
@@ -67,7 +68,7 @@ public class OpenwxController {
      */
     @RequestMapping(value = "/event/authorize")
     public void acceptAuthorizeEvent(HttpServletRequest request, HttpServletResponse response) throws IOException, AesException, DocumentException {
-    	 System.out.println("微信第三方平台---------微信推送Ticket消息10分钟一次-----------");
+    	 logger.info("微信第三方平台---------微信推送Ticket消息10分钟一次-----------" + DateUtils.gettimestamp().toString());
     	 processAuthorizeEvent(request);
          output(response, "success"); // 输出响应的内容。
     }
@@ -112,7 +113,7 @@ public class OpenwxController {
     @RequestMapping(value = "{appid}/callback")
     public void acceptMessageAndEvent(HttpServletRequest request, HttpServletResponse response) throws IOException, AesException, DocumentException {
         String msgSignature = request.getParameter("msg_signature");
-        System.out.println("第三方平台全网发布-------------{appid}/callback-----------验证开始。。。。msg_signature="+msgSignature);
+        logger.info("第三方平台全网发布-------------{appid}/callback-----------验证开始。。。。msg_signature="+msgSignature);
         if (!StringUtils.isNotBlank(msgSignature))
             return;// 微信推送给第三方开放平台的消息一定是加过密的，无消息加密无法解密消息
  
@@ -131,7 +132,7 @@ public class OpenwxController {
  
         //微信全网测试账号
         if (StringUtils.equalsIgnoreCase(toUserName, APPID)) {
-           System.out.println("全网发布接入检测消息反馈开始---------------APPID="+ APPID +"------------------------toUserName="+toUserName);
+           logger.info("全网发布接入检测消息反馈开始---------------APPID="+ APPID +"------------------------toUserName="+toUserName);
            checkWeixinAllNetworkCheck(request,response,xml);
         }
     }
@@ -161,13 +162,13 @@ public class OpenwxController {
                 sb.append(line);
             }
             String xml = sb.toString();
-            System.out.println("第三方平台全网发布-----------------------原始 Xml="+xml);
+            logger.info("第三方平台全网发布-----------------------原始 Xml="+xml);
             String encodingAesKey = COMPONENT_ENCODINGAESKEY;// 第三方平台组件加密密钥
             String appId = getAuthorizerAppidFromXml(xml);// 此时加密的xml数据中ToUserName是非加密的，解析xml获取即可
-            System.out.println("第三方平台全网发布-------------appid----------getAuthorizerAppidFromXml(xml)-----------appId="+appId);
+            logger.info("第三方平台全网发布-------------appid----------getAuthorizerAppidFromXml(xml)-----------appId="+appId);
             WXBizMsgCrypt pc = new WXBizMsgCrypt(COMPONENT_TOKEN, encodingAesKey, COMPONENT_APPID);
             xml = pc.decryptMsg(msgSignature, timestamp, nonce, xml);
-            System.out.println("第三方平台全网发布-----------------------解密后 Xml="+xml);
+            logger.info("第三方平台全网发布-----------------------解密后 Xml="+xml);
             processAuthorizationEvent(xml);
         }
     }
@@ -183,7 +184,7 @@ public class OpenwxController {
 			Element rootElt = doc.getRootElement();
 			String ticket = rootElt.elementText("ComponentVerifyTicket");
 			if(StringUtils.isNotEmpty(ticket)){
-			    System.out.println("8、推送component_verify_ticket协议-----------ticket = \"+ticket)");
+			    logger.info("8、推送component_verify_ticket协议-----------ticket = \"+ticket)");
 				WeixinOpenAccountEntity  entity = getWeixinOpenAccount(APPID);
 				entity = entity==null?new WeixinOpenAccountEntity():entity;
 				entity.setTicket(ticket);
@@ -244,14 +245,14 @@ public class OpenwxController {
         String toUserName = rootElt.elementText("ToUserName");
         String fromUserName = rootElt.elementText("FromUserName");
  
-        System.out.println("---全网发布接入检测--step.1-----------msgType="+msgType+"-----------------toUserName="+toUserName+"-----------------fromUserName="+fromUserName);
-        System.out.println("---全网发布接入检测--step.2-----------xml="+xml);
+        logger.info("---全网发布接入检测--step.1-----------msgType="+msgType+"-----------------toUserName="+toUserName+"-----------------fromUserName="+fromUserName);
+        logger.info("---全网发布接入检测--step.2-----------xml="+xml);
         if("event".equals(msgType)){
-        	 System.out.println("---全网发布接入检测--step.3-----------事件消息--------");
+        	 logger.info("---全网发布接入检测--step.3-----------事件消息--------");
         	 String event = rootElt.elementText("Event");
 	         replyEventMessage(request,response,event,toUserName,fromUserName);
         }else if("text".equals(msgType)){
-        	 System.out.println("---全网发布接入检测--step.3-----------文本消息--------");
+        	 logger.info("---全网发布接入检测--step.3-----------文本消息--------");
         	 String content = rootElt.elementText("Content");
 	         processTextMessage(request,response,content,toUserName,fromUserName);
         }
@@ -260,7 +261,7 @@ public class OpenwxController {
     
     public void replyEventMessage(HttpServletRequest request, HttpServletResponse response, String event, String toUserName, String fromUserName) throws DocumentException, IOException {
         String content = event + "from_callback";
-        System.out.println("---全网发布接入检测------step.4-------事件回复消息  content="+content + "   toUserName="+toUserName+"   fromUserName="+fromUserName);
+        logger.info("---全网发布接入检测------step.4-------事件回复消息  content="+content + "   toUserName="+toUserName+"   fromUserName="+fromUserName);
         replyTextMessage(request,response,content,toUserName,fromUserName);
     }
  
@@ -278,7 +279,7 @@ public class OpenwxController {
     public void replyApiTextMessage(HttpServletRequest request, HttpServletResponse response, String auth_code, String fromUserName) throws DocumentException, IOException {
         String authorization_code = auth_code;
         // 得到微信授权成功的消息后，应该立刻进行处理！！相关信息只会在首次授权的时候推送过来
-        System.out.println("------step.1----使用客服消息接口回复粉丝----逻辑开始-------------------------");
+        logger.info("------step.1----使用客服消息接口回复粉丝----逻辑开始-------------------------");
         try {
         	ApiComponentToken apiComponentToken = new ApiComponentToken();
         	apiComponentToken.setComponent_appid(COMPONENT_APPID);
@@ -287,9 +288,9 @@ public class OpenwxController {
         	apiComponentToken.setComponent_verify_ticket(entity.getTicket());
         	String component_access_token = JwThirdAPI.getAccessToken(apiComponentToken);
         	
-        	System.out.println("------step.2----使用客服消息接口回复粉丝------- component_access_token = "+component_access_token + "---------authorization_code = "+authorization_code);
+        	logger.info("------step.2----使用客服消息接口回复粉丝------- component_access_token = "+component_access_token + "---------authorization_code = "+authorization_code);
         	net.sf.json.JSONObject authorizationInfoJson = JwThirdAPI.getApiQueryAuthInfo(COMPONENT_APPID, authorization_code, component_access_token);
-        	System.out.println("------step.3----使用客服消息接口回复粉丝-------------- 获取authorizationInfoJson = "+authorizationInfoJson);
+        	logger.info("------step.3----使用客服消息接口回复粉丝-------------- 获取authorizationInfoJson = "+authorizationInfoJson);
         	net.sf.json.JSONObject infoJson = authorizationInfoJson.getJSONObject("authorization_info");
         	String authorizer_access_token = infoJson.getString("authorizer_access_token");
         	
@@ -344,7 +345,7 @@ public class OpenwxController {
         try {
             WXBizMsgCrypt pc = new WXBizMsgCrypt(COMPONENT_TOKEN, COMPONENT_ENCODINGAESKEY, COMPONENT_APPID);
             returnvaleue = pc.encryptMsg(replyMsg, createTime.toString(), "easemob");
-            System.out.println("------------------加密后的返回内容 returnvaleue： "+returnvaleue);
+            logger.info("------------------加密后的返回内容 returnvaleue： "+returnvaleue);
         } catch (AesException e) {
             e.printStackTrace();
         }
@@ -352,19 +353,19 @@ public class OpenwxController {
     }
     
     
-    public static void main(String[] args) {
-    	 Long createTime = Calendar.getInstance().getTimeInMillis() / 1000;
-    	 String replyMsg = "LOCATIONfrom_callback";
-    	 
-         String returnvaleue = "";
-         try {
-             WXBizMsgCrypt pc = new WXBizMsgCrypt(COMPONENT_TOKEN, COMPONENT_ENCODINGAESKEY, COMPONENT_APPID);
-             returnvaleue = pc.encryptMsg(replyMsg, createTime.toString(), "easemob");
-             System.out.println(returnvaleue);
-         } catch (AesException e) {
-             e.printStackTrace();
-         }
-	}
+//    public static void main(String[] args) {
+//    	 Long createTime = Calendar.getInstance().getTimeInMillis() / 1000;
+//    	 String replyMsg = "LOCATIONfrom_callback";
+//
+//         String returnvaleue = "";
+//         try {
+//             WXBizMsgCrypt pc = new WXBizMsgCrypt(COMPONENT_TOKEN, COMPONENT_ENCODINGAESKEY, COMPONENT_APPID);
+//             returnvaleue = pc.encryptMsg(replyMsg, createTime.toString(), "easemob");
+//             logger.info(returnvaleue);
+//         } catch (AesException e) {
+//             e.printStackTrace();
+//         }
+//	}
     /*
      * 工具类：回复微信服务器"文本消息"
      * @param response
@@ -374,7 +375,7 @@ public class OpenwxController {
 		try {
 			PrintWriter pw = response.getWriter();
 			pw.write(returnvaleue);
-			System.out.println("****************returnvaleue***************="+returnvaleue);
+			logger.info("****************returnvaleue***************="+returnvaleue);
 			pw.flush();
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -390,7 +391,7 @@ public class OpenwxController {
      * @return
      */
     public static boolean checkSignature(String token,String signature,String timestamp,String nonce){
-        System.out.println("###token:"+token+";signature:"+signature+";timestamp:"+timestamp+"nonce:"+nonce);
+        logger.info("###token:"+token+";signature:"+signature+";timestamp:"+timestamp+"nonce:"+nonce);
     	   boolean flag = false;
     	   if(signature!=null && !signature.equals("") && timestamp!=null && !timestamp.equals("") && nonce!=null && !nonce.equals("")){
     	      String sha1 = "";
