@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
+<log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/">
+	<appender name="CCBLog"
+		class="org.apache.log4j.DailyRollingFileAppender">
+<!--		<param name="File" value="/home/ap/dev/log/wxtp_app.log" />  -->
+	<param name="File" value="${user.home}/wxtptest/wxtp_app.log" />  
+		<param name="BufferedIO" value="false" />
+		<param name="Encoding" value="UTF-8" />
+        <param name="DatePattern" value="'.'yyyy-MM-dd'.log'" />
+<!--    <param name="MaxFileSize" value="1MB" />
+		<param name="MaxBackupIndex" value="10" />  -->
+		<layout class="org.apache.log4j.PatternLayout">
+			<param name="ConversionPattern"
+				value="[CCB][racs][%l][%d{yyyy-MM-dd HH:mm:ss SSS}][%-5p][userMessage=%m]%n" />
+<!--			value="[CCB][racs][%l][%d{yyyy-MM-dd HH:mm:ss SSS}][%-5p][evtTraceId=%X{['_evt_trace_id']}][transactionCode=%X{['_service_id']}][seqNo=%X{['_seq_no']}][userMessage=%m]%n" /> -->
+		</layout>
+	</appender>
+
+	<appender name="ConsoleLog"
+		class="org.apache.log4j.ConsoleAppender">
+		<param name="Encoding" value="UTF-8" />
+		<layout class="org.apache.log4j.PatternLayout">
+			<param name="ConversionPattern"
+			value="[CCB][racs][%l][%d{yyyy-MM-dd HH:mm:ss SSS}][%-5p][userMessage=%m]%n" />
+<!--			value="[CCB][racs][%l][%d{yyyy-MM-dd HH:mm:ss SSS}][%-5p][evtTraceId=%X{['_evt_trace_id']}][transactionCode=%X{['_service_id']}][seqNo=%X{['_seq_no']}][userMessage=%m]%n" />-->
+		</layout>
+	</appender>
+	
+	<appender name="OtherLog"
+		class="org.apache.log4j.DailyRollingFileAppender">
+		<param name="File" value="${user.home}/wxtptest/other_app.log " />
+		<param name="BufferedIO" value="false" />
+		<param name="Encoding" value="UTF-8" />
+<!--	<param name="MaxFileSize" value="1MB" />
+		<param name="MaxBackupIndex" value="10" />  -->
+		<layout class="org.apache.log4j.PatternLayout">
+			<param name="ConversionPattern"
+				value="[CCB][racs][%l][%d{yyyy-MM-dd HH:mm:ss SSS}][%-5p][userMessage=%m]%n" />
+		</layout>
+	</appender>
+		<!-- 调试iBatis时打开 -->
+	<logger name="com.ibatis" additivity="true">
+	<level value="DEBUG"></level>
+	</logger>
+	<logger name="java.sql.Connection" additivity="true">
+		<level value="DEBUG"></level>
+	</logger>
+	<logger name="java.sql.Statement" additivity="true">
+		<level value="DEBUG"></level>
+	</logger>
+	<logger name="java.sql.PreparedStatement" additivity="true">
+		<level value="DEBUG"></level>
+	</logger>
+	<logger name="java.sql.ResultSet" additivity="true">
+		<level value="DEBUG"></level>
+	</logger>
+	<logger name="com.ccb" additivity="false">
+		<level value="INFO"></level>
+		<appender-ref ref="CCBLog" />
+		<appender-ref ref="ConsoleLog" />
+	</logger>
+
+	<root>
+		<level value="INFO" />
+		<appender-ref ref="OtherLog" />
+		<appender-ref ref="ConsoleLog" />
+	</root>
+</log4j:configuration>
