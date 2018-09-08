@@ -42,16 +42,19 @@ import java.util.*;
 @RequestMapping("/openwx")
 public class OpenwxController {
 
+    //自动化测试的专用测试公众号appid
 	private final String APPID = "wx570bc396a51b8ff8";
+	//自动化测试的专用测试公众号 username
     private final String USERNAME = "gh_3c884a361561";
     private static CommonLogger logger = CommonLogFactory.getLogger(OpenwxController.class);
 
-	/**
-	 * 微信全网测试账号
-	 **/
+	//金科平方平台APPID
 	private final static String COMPONENT_APPID = "wx5fc3967fdf9de618";
+	//金科开放平台appsecret
 	private final static String COMPONENT_APPSECRET = "b8ecd40b98e28929a6d001ae89bafeb3";
+	//金科开放平台消息加解密key
 	private final static String COMPONENT_ENCODINGAESKEY = "ryj8otghsh46jl895e6ujk68o4w5ygjtuk8w6htk5t6";
+	//金科开放平台消息校验TOKEN
 	private final static String COMPONENT_TOKEN = "34g31qgv3425g35";
 	
 //	@Autowired
@@ -68,7 +71,10 @@ public class OpenwxController {
      */
     @RequestMapping(value = "/event/authorize")
     public void acceptAuthorizeEvent(HttpServletRequest request, HttpServletResponse response) throws IOException, AesException, DocumentException {
-    	 logger.info("微信第三方平台---------微信推送Ticket消息10分钟一次-----------" + DateUtils.gettimestamp().toString());
+        /**
+         * 出于安全考虑，在第三方平台创建审核通过后，微信服务器 每隔10分钟会向第三方的消息接收地址推送一次component_verify_ticket，用于获取第三方平台接口调用凭据。
+         */
+        logger.info("微信第三方平台---------微信推送Ticket消息10分钟一次-----------" + DateUtils.gettimestamp().toString());
     	 processAuthorizeEvent(request);
          output(response, "success"); // 输出响应的内容。
     }
@@ -97,8 +103,9 @@ public class OpenwxController {
     	WeixinOpenAccountEntity  entity = getWeixinOpenAccount(APPID);
     	apiComponentToken.setComponent_verify_ticket(entity.getTicket());
     	try {
+    	    //使用component_verify_ticket来获取component_access_token
 			String component_access_token = JwThirdAPI.getAccessToken(apiComponentToken);
-			//预授权码
+			//预授权码  第三方平台通过自己的接口调用凭据（component_access_token）来获取用于授权流程准备的预授权码（pre_auth_code）
 			String preAuthCode = JwThirdAPI.getPreAuthCode(COMPONENT_APPID, component_access_token);
 			String url = "https://mp.weixin.qq.com/cgi-bin/componentloginpage?component_appid="+COMPONENT_APPID+"&pre_auth_code="+preAuthCode+"&redirect_uri=";//+ResourceUtil.getConfigByName("domain")+"/rest/openwx/authorCallback";
 			response.sendRedirect(url);
@@ -107,9 +114,16 @@ public class OpenwxController {
 		}
     	
     }
-    
-    
-    
+
+    /**
+     * 接受配置在第三方平台的request 消息与事件接收URL
+     * http://ziencheng.com/openwx/$APPID$/callback
+     * @param request
+     * @param response
+     * @throws IOException
+     * @throws AesException
+     * @throws DocumentException
+     */
     @RequestMapping(value = "{appid}/callback")
     public void acceptMessageAndEvent(HttpServletRequest request, HttpServletResponse response) throws IOException, AesException, DocumentException {
         String msgSignature = request.getParameter("msg_signature");
@@ -126,6 +140,13 @@ public class OpenwxController {
         in.close();
  
         String xml = sb.toString();
+        /**
+         * <xml>
+         *     <ToUserName><![CDATA[gh_3c884a361561]]></ToUserName>
+         *     <Encrypt><![CDATA[m64gIdqDfmJWFym1nJDD/hHinEIttbjeAeqrwKYGSUs8h1jQNYzv8EogoKt+A1slDKvNBwa2YEWZZsfJcg7YeClLUBRPoIHHDQDhm8Re3F1CXRMQgyNHly5umvQ4/Yq3rQrq8YCpi3n3ErjTd5xhNiA/p4h3oNFTxD8fE9EU+tUary/RkTKvl/M2eBGPEa575MUWlUx45V9axtzLIXeSIHV0WkjUYLt3ijvYntUBEkLhm/D0DxBbGiaTTO6XDn8JpWg0XY1xg4mzZ2OfL/UppLrwHhG7V3lSS/6+AneMEiaM8ErfS9JQ9CPiffH04chgSqyZpMYyP77sYFOYhrVLl6XSo2M7NrRNMtsc//gw2hHqBPyPlkI2EW0u2/XCiQbdYDg9Agdl8RCjcSP8h03D1Bqpk020IxVIHCHdj9EJRLiL+6fcMvEDaoEr0LR7FOnJoZbhsU1gEnUFrlZctaDRirescwA1aSI/gLCXTDXFI84b4VafPPZwmQDkndJwsPX+dSBr8PdCDllldWciG0n+su7kyVfEIrz6JhrliCEJPJN/3JYHPi7uoFH6KFSVvf8JIF/pG+Qbb/a51ZK/8FUFmlQ==]]>
+         *     </Encrypt>
+         *</xml>
+         */
         logger.info("第三方平台全网发布-------------{appid}/callback-----------验证开始。。。。xml="+xml);
         Document doc = DocumentHelper.parseText(xml);
         Element rootElt = doc.getRootElement();
@@ -163,6 +184,15 @@ public class OpenwxController {
                 sb.append(line);
             }
             String xml = sb.toString();
+            /**
+             * 原始报文类似这样
+             * <xml>
+             *     <AppId><![CDATA[wx5fc3967fdf9de618]]></AppId>
+             *     <Encrypt><![CDATA[2vkIc7Ri8OlbDU7AwYRlho5eKmquos3EQQ6JVHCCbnSjlDqTDXpTTXCMiTFQ2qvZYCJlWfy+GhHgYnn
+             * 4ilR1TVC5tThevepOvv2LA4wNoQdGoZNdQT+yQ/c6aj5E+aGnQhQMTNK8xmRLyl67CeQeCf5UsrPKEsFGqxbZmmWL2m3aKbZgtsl27P94Mq8slT9K13fbpD9ubkHQEyGB8UmrTt+brlsW8U0QYz9mkfe8xSM2JRDdU4ZjW4WsIzoJq3+SPEBlK+TtxSQoZN+JqUqsIIg7CZSerOBc3OZV4ogIFvn6l8wCeh7uQmZjMVcW3hyFXcisBA6bsa7LNADjWS8A31MOwlzUrbobr0DMDT7qMnlAug+2SKTYubwQdJB5HUEz/imhhPVCy6nCMOGnzSXY3YG0O+eM7eErJm6h3a8lrZ2hwgSdu1STCH44hrIbAUb4GSMtoZIS4yaxGljBKzy/gOkJkUk7q4fy48oHpG3sw7Ox14YMH/aPQ0DGnC49rzVLBygNqGkusY9Gr6xoiyYwUMIfQPDed65JrI07hZt+T0UYyR0QULtedMMUhAqFZKoLdr3twj8vKkUtuojSWt2UssT7z5PGD58Zv5DElK2MLZS2FiAdVaQXwhdUWn3ArEekXcZ7+ed99KxlFdkcHQLefjysHV2tPL6dAnyl6EYLE1nq//TIlAD+55kcLyQFRIQfTkX3B5dpXrKMt6TcV/Lf2D/7CjsAIRz8vStHy8ww6wwVXzgWGEhJAci5rOnwE6KHafzhCKU4lpYDeNG31r+rYowmnbOEqibEkkwMNDcZjfFM=]]>
+             *     </Encrypt>
+             * </xml>
+             */
             logger.info("第三方平台全网发布-----------------------原始 Xml="+xml);
             String encodingAesKey = COMPONENT_ENCODINGAESKEY;// 第三方平台组件加密密钥
             String appId = getAuthorizerAppidFromXml(xml);// 此时加密的xml数据中ToUserName是非加密的，解析xml获取即可
@@ -170,6 +200,7 @@ public class OpenwxController {
             WXBizMsgCrypt pc = new WXBizMsgCrypt(COMPONENT_TOKEN, encodingAesKey, COMPONENT_APPID);
             xml = pc.decryptMsg(msgSignature, timestamp, nonce, xml);
             logger.info("第三方平台全网发布-----------------------解密后 Xml="+xml);
+
             processAuthorizationEvent(xml);
         }
     }
@@ -179,6 +210,24 @@ public class OpenwxController {
      * @param xml
      */
     void processAuthorizationEvent(String xml){
+        /**
+         * 解密后报文类似这样
+         * //第三方平台appid
+         <xml><AppId><![CDATA[wx5fc3967fdf9de618]]></AppId>
+         <CreateTime>1536328643</CreateTime>
+         <InfoType><![CDATA[component_verify_ticket]]></InfoType>
+         <ComponentVerifyTicket>
+         <![CDATA[ticket@@@6LTwQzSBzIMksx9GZIqb5o77ar-hp6-8_yKjJBsbATW3lgWI1J0cHeJ-SV3C-wPi15vjPsuBQRbo_9DkYrxJQw]]>
+         </ComponentVerifyTicket>
+         </xml>
+         */
+        /**
+         * 微信官方文档写到：
+         * 注意：
+         * component_verify_ticket的有效时间较component_access_token更长，
+         * 建议保存最近可用的component_verify_ticket，在component_access_token过期之前使用该ticket进行更新，
+         * 避免出现因为ticket接收失败而无法更新component_access_token的情况。
+         */
     	Document doc;
 		try {
 			doc = DocumentHelper.parseText(xml);
@@ -186,8 +235,8 @@ public class OpenwxController {
 			String ticket = rootElt.elementText("ComponentVerifyTicket");
 			if(StringUtils.isNotEmpty(ticket)){
 			    logger.info("8、推送component_verify_ticket协议-----------ticket = \"+ticket)");
-				WeixinOpenAccountEntity  entity = getWeixinOpenAccount(APPID);
-				entity = entity==null?new WeixinOpenAccountEntity():entity;
+				WeixinOpenAccountEntity  entity = getWeixinOpenAccount(APPID);//这里的a
+//				entity = entity==null?new WeixinOpenAccountEntity():entity;
 				entity.setTicket(ticket);
 				entity.setAppid(APPID);
 				entity.setGetTicketTime(new Date());
@@ -222,8 +271,8 @@ public class OpenwxController {
 		try {
 			doc = DocumentHelper.parseText(xml);
 			Element rootElt = doc.getRootElement();
-			String toUserName = rootElt.elementText("ToUserName");
-			return toUserName;
+			String appId = rootElt.elementText("AppId");
+			return appId;
 		} catch (DocumentException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -253,6 +302,26 @@ public class OpenwxController {
         	 String event = rootElt.elementText("Event");
 	         replyEventMessage(request,response,event,toUserName,fromUserName);
         }else if("text".equals(msgType)){
+            /**
+             * 类似这种报文
+             * <xml><ToUserName><![CDATA[gh_3c884a361561]]></ToUserName>
+             * <FromUserName><![CDATA[ozy4qt5QUADNXORxCVipKMV9dss0]]></FromUserName>
+             * <CreateTime>1536320605</CreateTime>
+             * <MsgType><![CDATA[text]]></MsgType>
+             * <Content><![CDATA[TESTCOMPONENT_MSG_TYPE_TEXT]]></Content>
+             * <MsgId>6598446755053214075</MsgId>
+             * </xml>
+             *
+             * or
+             *
+             * <xml><ToUserName><![CDATA[gh_3c884a361561]]></ToUserName>
+             * <FromUserName><![CDATA[ozy4qt5QUADNXORxCVipKMV9dss0]]></FromUserName>
+             * <CreateTime>1536328596</CreateTime>
+             * <MsgType><![CDATA[text]]></MsgType>
+             * <Content><![CDATA[QUERY_AUTH_CODE:queryauthcode@@@7kOyFlKErMmS1G47yMFHuE7m_BLywiPJNGYxRyfQ09b8YqFu46ULpbIaE9T3tzY91B6SidBU0SQB9NHEmXpfVw]]></Content>
+             * <MsgId>6598481076136876634</MsgId>
+             * </xml>
+             */
         	 logger.info("---全网发布接入检测--step.3-----------文本消息--------");
         	 String content = rootElt.elementText("Content");
 	         processTextMessage(request,response,content,toUserName,fromUserName);
@@ -268,9 +337,19 @@ public class OpenwxController {
  
     public void processTextMessage(HttpServletRequest request, HttpServletResponse response,String content,String toUserName, String fromUserName) throws IOException, DocumentException{
         if("TESTCOMPONENT_MSG_TYPE_TEXT".equals(content)){
+            /**
+             * 1、模拟粉丝发送文本消息给专用测试公众号，第三方平台方需根据文本消息的内容进行相应的响应：
+             *
+             * 1）微信模推送给第三方平台方：文本消息，其中Content字段的内容固定为：TESTCOMPONENT_MSG_TYPE_TEXT
+             *
+             * 2）第三方平台方立马回应文本消息并最终触达粉丝：Content必须固定为：TESTCOMPONENT_MSG_TYPE_TEXT_callback
+             */
             String returnContent = content+"_callback";
             replyTextMessage(request,response,returnContent,toUserName,fromUserName);
         }else if(StringUtils.startsWithIgnoreCase(content, "QUERY_AUTH_CODE")){
+            /**
+             * 模拟粉丝发送文本消息给专用测试公众号，第三方平台方需在5秒内返回空串表明暂时不回复，然后再立即使用客服消息接口发送消息回复粉丝
+             */
             output(response, "");
             //接下来客服API再回复一次消息
             replyApiTextMessage(request,response,content.split(":")[1],fromUserName);
